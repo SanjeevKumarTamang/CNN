@@ -3,17 +3,18 @@ from django.shortcuts import render
 # Create your views here.
 from django.http import HttpResponse
 from rest_framework.response import Response
-from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import FileUploadParser
 from rest_framework.views import APIView
 
 from .MLModels import CatVsDogTester
 from .models import Lead, SampleImage
-from .serializers import LeadSerializer, FileSerializer
-from rest_framework import generics, status, permissions, request
+from .serializers import LeadSerializer
+from rest_framework import generics, status
 import json
+import logging
 
+logger = logging.getLogger(__name__)
 def index(request):
     return HttpResponse("Hello, world. You're at the polls index.")
 
@@ -29,14 +30,18 @@ class FileUploadView(APIView):
 
     def post(self, request, format=None):
         if 'image' not in request.data:
+            logger.error('Something went wrong!')
             raise ParseError("Empty content")
+        try:
+            img = request.data['image']
+            predictedAnimal=CatVsDogTester.guessTheImage(img)
+            x = {
+                "name": predictedAnimal
+            }
+            return Response(data=json.dumps(x), content_type='application/json')
+        except Exception as e:
+            logger.error(e)
 
-        img = request.data['image']
-        predictedAnimal=CatVsDogTester.guessTheImage(img)
-        x = {
-            "name": predictedAnimal
-        }
-        return Response(data=json.dumps(x), content_type='application/json')
         # return HttpResponse(predictedAnimal)
 
     def delete(self, request, format=None):
